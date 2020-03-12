@@ -43,37 +43,38 @@ def saveNewFile() :
     df = pa
 
 
-def getWeather(lat, lon) :
+def getWeather(lat, lon, date) :
     api_key = ""
-    api_url = "https://api.darksky.net/forecast/"+ api_key + "/" 
-    query = api_url + lat + "," + lon
+    api_url = "https://api.darksky.net/forecast/"+ api_key + "/"
+
+    formatedDate = convertDate(date)
+    query = api_url + lat + "," + lon + "," + formatedDate
     # TODO: check if weather is already exited to reduced API cost 
 
     # convert time to unix format 
-    date = "05/03/2016 09:00:00 PM"
-    # recived date formte %d/%m/%Y %H:%M:%S %p
-    date_object = datetime.strptime(str, '%d/%m/%Y %H:%M:%S %p')
-    # unixtime
-    unixTime = time.strftime("%s", "05/03/2016 09:00:00 PM")
-
+    date = convertDate(date)
     response = req.get(query)
     json_response = response.json()
     print(json_response)
 
+## convert date format 
+def convertDate(date) :
+    fmt = ("%m/%d/%Y %I:%M:%S %p")
+    # d = "05/03/2016 04:00:00 PM"
+    epochDate = int(time.mktime(time.strptime(date, fmt)))
+
+    print(epochDate)
+
+    #test converted date
+    # print("Orginal date: " + d)
+    print(time.strftime(fmt, time.localtime(epochDate)))
+    return str(epochDate)
+
 # RUN
-# getWeather("41.880658","-87.731212")
+d = "05/03/2016 04:00:00 PM"
+
+getWeather("41.880658","-87.731212", d)
 # d = datetime.date(2015,1,5)
 
-# unixtime = time.mktime(d.timetuple())
-# print(unixtime)
-str = "05/03/2016 04:00:00 PM"
-date_object = datetime.strptime(str, "%m/%d/%Y %H:%M:%S %p")
-print(str)
-print(date_object)
 
-unixTime = time.mktime(date_object.timetuple())
-print(date_object.strftime("%b %d %Y %H:%M:%S %p"))
-
-print(unixTime)
-print(datetime.fromtimestamp(unixTime).strftime('%Y-%m-%d %H:%M:%S %p'))
 # start()
