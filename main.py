@@ -9,7 +9,19 @@ from pandas.io.json import json_normalize
 
 import requests as req
 import time
+import json
 from datetime import datetime
+
+
+def start2():
+    rowsLimit = 10
+    file1 = readOrginalFile("chicago_crimes_2016.csv")
+    content = file1.head(rowsLimit)
+    content[["ID", "Date", "Latitude", "Longitude"]]
+    content['API_response'] = content.apply(get_weather, axis=1)
+    res = json_normalize(content['API_response'])
+    new_df = res[['summary', 'time']]
+    print(content.head(10))
 
 
 def start():
@@ -31,24 +43,35 @@ def start():
         # print(value)
 
         weatherData = getWeather(lat, log,  date)
-        value = pa.concat([value, weatherData], sort=False)
-
-        print(value)
-
-        # content["time"] = weatherData['time']
-        # content["summary"] = weatherData["summary"]
-        # content["temperature"] = weatherData["temperature"]
-        # content["humidity"] = weatherData["humidity"]
-        # content["pressure"] = weatherData["pressure"]
-        # content["windSpeed"] = weatherData["windSpeed"]
-        # content["cloudCover"] = weatherData["cloudCover"]
-        # content["visibility"] = weatherData["visibility"]
+        print("is empty" + str(weatherData.empty))
+        if not weatherData.empty:
+            print("Weather data has data: " + str(weatherData.empty))
+        print('is data type correct: ' + str(type(weatherData) is type(content)))
+        if (type(weatherData) is type(content)) and not (weatherData.empty):
+            print("Im not sure")
+            print(weatherData)
+            value["time"] = weatherData['time']
+            value["summary"] = weatherData["summary"]
+            value["temperature"] = weatherData["temperature"]
+            value["humidity"] = weatherData["humidity"]
+            value["pressure"] = weatherData["pressure"]
+            value["windSpeed"] = weatherData["windSpeed"]
+            value["cloudCover"] = weatherData["cloudCover"]
+            value["visibility"] = weatherData["visibility"]
         # finalData = pa.concat([value, weatherData], sort=False)
         # print(finalData)
-        # print(key)
+        print(key)
+        print(value)
         if key == 10:
+            print(content)
             break
+    # clean data that missing weather details
+    content.dropna(how='any')
+    print("### Content:   " + str(content))
+    # save to file
     content.to_csv("data/fil4.csv", index=False)
+    # print save
+    print("### Saved ###")
 # content = file1.loc()
 # for label, row in file1.iterrows():
 #     print(label)
@@ -78,33 +101,79 @@ def saveNewFile():
     df = pa
 
 
+def get_weather(row):
+    print('is weather called: ' + str(row['Date']))
+    api_key = ""
+    api_url = "https://api.darksky.net/forecast/" + api_key + "/"
+    # Measurements units
+    units = "si"
+    # convert time to unix format
+    lat = str(row["Latitude"])
+    log = str(row["Longitude"])
+    formatedDate = convertDate(str(row["Date"]))
+    # build url query
+    query = api_url + lat + "," + log + "," + formatedDate + \
+        "?units=" + units + "&exclude=currently,flags"
+    try:
+        weatherData = {}
+        response = (req.get(query).text)
+        json_response = json.loads(response)
+        for items in json_response['hourly']['data']:
+            if items['time'] == int(formatedDate):
+                weatherData = {
+                    "time": items['time'],
+                    "summary": items["summary"],
+                    "temperature": items["temperature"],
+                    "humidity": items["humidity"],
+                    "pressure": items["pressure"],
+                    "windSpeed": items["windSpeed"],
+                    "cloudCover": items["cloudCover"],
+                    "visibility": items["visibility"]
+                }
+                break
+        return weatherData
+
+    except Exception as e:
+        raise e
+
+
 def getWeather(lat, lon, date):
     api_key = ""
     api_url = "https://api.darksky.net/forecast/" + api_key + "/"
+    # Measurements units
     units = "si"
+    # convert time to unix format
     formatedDate = convertDate(date)
+    # build url query
     query = api_url + lat + "," + lon + "," + formatedDate + \
         "?units=" + units + "&exclude=currently,flags"
     # TODO: check if weather is already exited to reduced API cost
-
-    # convert time to unix format
-    response = req.get(query)
-    json_response = response.json()
-    # print(json_response['hourly']['data'])
+    # catch api errors
     weatherData = {}
-    for items in json_response['hourly']['data']:
-        if items['time'] == int(formatedDate):
-            weatherData = {
-                "time": items['time'],
-                "summary": items["summary"],
-                "temperature": items["temperature"],
-                "humidity": items["humidity"],
-                "pressure": items["pressure"],
-                "windSpeed": items["windSpeed"],
-                "cloudCover": items["cloudCover"],
-                "visibility": items["visibility"]
-            }
-            break
+
+    try:
+        response = req.get(query)
+        json_response = response.json()
+        # print("json responsse : " + str(json_response))
+        # print("lat: " + lat + "," + lon + "," + formatedDate)
+    # print(json_response['hourly']['data'])
+        for items in json_response['hourly']['data']:
+            if items['time'] == int(formatedDate):
+                weatherData = {
+                    "time": items['time'],
+                    "summary": items["summary"],
+                    "temperature": items["temperature"],
+                    "humidity": items["humidity"],
+                    "pressure": items["pressure"],
+                    "windSpeed": items["windSpeed"],
+                    "cloudCover": items["cloudCover"],
+                    "visibility": items["visibility"]
+                }
+                break
+    except requests.exceptions.RequestException as e:
+        print e
+        return e
+
     return json_normalize(weatherData)
 
 
@@ -113,7 +182,6 @@ def convertDate(date):
     fmt = ("%m/%d/%Y %I:%M:%S %p")
     # d = "05/03/2016 04:00:00 PM"
     epochDate = int(time.mktime(time.strptime(date, fmt)))
-
 
     # test converted date
     # print("Orginal date: " + d)
@@ -126,4 +194,4 @@ def convertDate(date):
 # d = datetime.date(2015,1,5)
 
 
-start()
+start2()
